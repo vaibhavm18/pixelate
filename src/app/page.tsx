@@ -12,20 +12,38 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Upload } from "lucide-react";
+import imageCompression from "browser-image-compression";
+
 
 const PixelateImageTool = () => {
   const [image, setImage] = useState<string | null>(null);
   const [pixelSize, setPixelSize] = useState(10);
   const [pixelatedImage, setPixelatedImage] = useState<string | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => setImage(e.target?.result as string);
-      reader.readAsDataURL(file);
+      setIsCompressing(true);
+      try {
+        const options = {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+        };
+        const compressedFile = await imageCompression(file, options);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setImage(e.target?.result as string);
+          setIsCompressing(false);
+        };
+        reader.readAsDataURL(compressedFile);
+      } catch (error) {
+        console.error("Error compressing image:", error);
+        setIsCompressing(false);
+      }
     }
   };
 
@@ -90,7 +108,8 @@ const PixelateImageTool = () => {
               style={{ display: "none" }}
             />
             <Button onClick={triggerFileInput} className="w-full">
-              <Upload className="mr-2 h-4 w-4" /> Upload Image
+              <Upload className="mr-2 h-4 w-4" /> 
+              {isCompressing ? "Compressing..." : "Upload Image"}
             </Button>
           </div>
           {image && (
